@@ -1,44 +1,38 @@
+# Имя рабочего процесса, которое отображается на странице GitHub Actions
 name: Build Android APK
 
+# События, которые запускают этот рабочий процесс
 on:
   push:
-    branches: [ main, master ]
+    branches:
+      - main  # Запускать при пуше в ветку main
   pull_request:
-    branches: [ main, master ]
-  release:
-    types: [ published ]
+    branches:
+      - main  # Запускать при запросе на слияние в ветку main
+  workflow_dispatch:  # Позволяет запускать рабочий процесс вручную
 
 jobs:
   build:
+    # Рабочий процесс будет выполняться на последней версии Ubuntu
     runs-on: ubuntu-latest
-    
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    - name: Build with Buildozer Docker
-      uses: artem-solovev/buildozer-action@v2
-      with:
-        work-dir: .
-        buildozer-version: stable
-        target: android
-        command: buildozer android debug
-        buildozer-params: ""
+      # Использование действия GitHub для сборки APK с помощью Buildozer
+      - name: Build APK with Buildozer
+        uses: ArtemSBulgakov/buildozer-action@v1.2.0
+        id: buildozer
+        with:
+          # Команда для Buildozer: собирает отладочную версию APK
+          buildozer-command: buildozer android debug
+          # Версия Python для сборки (рекомендуется 3.8 для Buildozer)
+          python-version: "3.8"
 
-    - name: Upload APK artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: Snake-By-Pasha-APK
-        path: bin/*.apk
-        retention-days: 30
-
-    - name: Upload to Release
-      if: github.event_name == 'release'
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ github.event.release.upload_url }}
-        asset_path: ./bin/*.apk
-        asset_name: Snake-By-Pasha-${{ github.event.release.tag_name }}.apk
-        asset_content_type: application/vnd.android.package-archive
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: myapp-apk
+          # Путь к сгенерированному APK-файлу
+          path: ${{ steps.buildozer.outputs.filename }}
